@@ -1,0 +1,7 @@
+{
+  "name": "Copy of Production ready Tornado Go",
+  "description": "A taxi cab booking, ride tracking, and passenger communication app based out of Taylorville, Illinois.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

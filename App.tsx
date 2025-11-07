@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useRef } from 'react';
 import type { User, Role, Ride, Message, LatLng } from './types';
 
@@ -7,7 +8,6 @@ import PassengerDashboard from './components/FeaturedDoctorCard';
 import DriverDashboard from './components/SearchBar';
 import AdminDashboard from './components/CategoryGrid';
 import RideDetailScreen from './components/DoctorList';
-import FloatingIcon from './components/FloatingIcon';
 import GuestRideRequest from './components/GuestRideRequest';
 
 // MOCK DATA
@@ -32,6 +32,8 @@ const INITIAL_RIDES: Ride[] = [
         id: 2, passengerId: 4,
         pickupLocation: 'Walmart Supercenter, Taylorville, IL', destination: '100 W Market St, Taylorville, IL',
         status: 'pending', requestTime: new Date(Date.now() - 2 * 60 * 1000),
+        pickupCoords: { lat: 39.5375, lng: -89.3054 },
+        destinationCoords: { lat: 39.5488, lng: -89.2925 },
     },
     {
         id: 3, passengerId: 1, driverId: 2,
@@ -72,7 +74,7 @@ const App: React.FC = () => {
     if ('Notification' in window && notificationPermission === 'granted') {
       new Notification(title, {
         body: options?.body,
-        icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0xOSAxN2gyYy42IDAgMS0uNCAxLTF2LTNjMC0uOS0uNy0xLjctMS41LTEuOUMxOC43IDEwLjYgMTYgMTAgMTYgMTBzLTEuMy0xLjQtMi4yLTIuM2MtLjUtLjQtMS4xLS43LTEuOC0uN0g1Yy0uNiAwLTEuMS40LTEuNC45TDIgMTJ2OWMwIC42LjQgMSAxIDFoMiIgLz48Y2lyY2xlIGN4PSI3IiBjeT0iMTciIHI9IjIiIC8+PHBhdGggZD0iTTkgMTdoNiIgLz48Y2lyY2xlIGN4PSIxNyIgY3k9IjE3IiByPSIyIiAvPjwvc3ZnPg==', // Simple Car Icon
+        icon: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZHRoPSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9ImN1cnJlbnRDb2xvciIgc3Ryb2tlLXdpZHRoPSIyIiBzdHJva2UtbGluZWNhcD0icm91bmQiIHN0cm9rZS1saW5lam9pbj0icm91bmQiPjxwYXRoIGQ9Ik0xOSAxN2gyYy42IDAgMS0uNCAxLTF2LTNjMC0uOS0uNy0xLjctMS41LTEuOUMxOC43IDEwLjYgMTYgMTAgMTYgMTBzLTEuMy0xLjQtMi4yLTIuM2MtLjUtLjQtMS4xLS43LTEuOC0uN0g1Yy0uNiAwLTEuMS40LTEuNC45TDIgMTJ2OWMwIC42LjQgMSAxIDFoMiIgLz48Y2lyY2xlIGN4PSI3IiBjeT0iMTciIHI9IjIiIC8+PHBhdGggZD0iTTkgMTdoNiIgLz48Y2lyY2xlIGN4PSIxNyIgY3k9IjE3IiByPSIyIiAvPjwvc3ZnPg==', // Simple Car Icon
         ...options,
       });
     }
@@ -199,6 +201,7 @@ const App: React.FC = () => {
       destination,
       status: 'pending',
       requestTime: new Date(),
+      pickupCoords: typeof pickupLocation === 'object' ? pickupLocation : await geocodeAddress(pickupLocation) || undefined,
       destinationCoords: destCoords,
     };
     setRides([newRide, ...rides]);
@@ -210,15 +213,16 @@ const App: React.FC = () => {
     const rideToAccept = rides.find(r => r.id === rideId);
     if (!rideToAccept) return;
     
-    const pickupCoords = typeof pickupLocation === 'object' ? pickupLocation : await geocodeAddress(rideToAccept.pickupLocation);
+    const pickupCoords = rideToAccept.pickupCoords;
     if (!pickupCoords) {
         alert("Could not get coordinates for pickup. Cannot accept ride.");
         return;
     }
 
-    sendNotification('Ride Accepted!', { body: 'A driver is on the way to the pickup location.' });
+    sendNotification('Ride Accepted!', { body: `Passenger at ${rideToAccept.pickupLocation} is waiting.` });
     
-    const driverStartPosition = { lat: pickupCoords.lat + 0.05, lng: pickupCoords.lng + 0.05 }; // Simulate driver starting nearby
+    // Simulate driver starting nearby
+    const driverStartPosition = { lat: pickupCoords.lat + 0.05, lng: pickupCoords.lng + 0.05 }; 
     
     setRides(rides.map(r => r.id === rideId ? { ...r, status: 'accepted', driverId: currentUser.id, pickupCoords, driverLocation: driverStartPosition } : r));
 
@@ -232,4 +236,145 @@ const App: React.FC = () => {
     setCurrentView('rideDetail');
   };
   
-  const handleSelectRide = (
+  const handleSelectRide = (rideId: number) => {
+    setSelectedRideId(rideId);
+    setCurrentView('rideDetail');
+  };
+
+  const handleSendMessage = (text: string) => {
+    if (!currentUser || !selectedRideId) return;
+    const newMessage: Message = {
+      id: Date.now(),
+      rideId: selectedRideId,
+      senderId: currentUser.id,
+      text,
+      timestamp: new Date(),
+    };
+    setMessages([...messages, newMessage]);
+  };
+
+  const handleBack = () => {
+    setSelectedRideId(null);
+    if (currentUser) {
+      setCurrentView(currentUser.role);
+    } else {
+      setCurrentView('login');
+    }
+  };
+
+  const handleUpdateUser = (updatedUser: User) => {
+    setUsers(users.map(u => u.id === updatedUser.id ? updatedUser : u));
+  };
+
+  const handleDeleteUser = (userId: number) => {
+    if (window.confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      setUsers(users.filter(u => u.id !== userId));
+    }
+  };
+
+  const handleGuestRequestRide = async (destination: string, name: string, phone: string, email: string) => {
+    const destCoords = await geocodeAddress(destination);
+    if (!destCoords) {
+        alert("Could not find coordinates for the destination. Please try a different address.");
+        return;
+    }
+    
+    const guestUser: User = {
+      id: Date.now(),
+      name: name || 'Guest',
+      username: `guest_${Date.now()}`,
+      role: 'passenger',
+      avatarUrl: `https://i.pravatar.cc/150?u=guest${Date.now()}`,
+      email,
+    };
+
+    const newRide: Ride = {
+      id: Date.now(),
+      passengerId: guestUser.id,
+      pickupLocation: typeof pickupLocation === 'object' ? `${pickupLocation.lat.toFixed(5)}, ${pickupLocation.lng.toFixed(5)}` : pickupLocation,
+      destination,
+      status: 'pending',
+      requestTime: new Date(),
+      pickupCoords: typeof pickupLocation === 'object' ? pickupLocation : await geocodeAddress(pickupLocation as string) || undefined,
+      destinationCoords: destCoords,
+    };
+    
+    setUsers([...users, guestUser]);
+    setRides([newRide, ...rides]);
+
+    alert("Your ride has been requested! A driver will be assigned shortly.");
+    setCurrentView('login');
+  };
+
+  const renderContent = () => {
+    switch (currentView) {
+      case 'login':
+        return <LoginScreen 
+          onLogin={handleLogin} 
+          demoUsers={users}
+          onGuestRequest={() => setCurrentView('guestRequest')}
+        />;
+      case 'passenger':
+        if (!currentUser) return <LoginScreen onLogin={handleLogin} demoUsers={users} onGuestRequest={() => setCurrentView('guestRequest')} />;
+        return <PassengerDashboard
+          user={currentUser}
+          rides={rides.filter(r => r.passengerId === currentUser.id)}
+          onRequestRide={handleRequestRide}
+          onSelectRide={handleSelectRide}
+          pickupLocation={pickupLocation}
+          onLogout={handleLogout}
+        />;
+      case 'driver':
+        if (!currentUser) return <LoginScreen onLogin={handleLogin} demoUsers={users} onGuestRequest={() => setCurrentView('guestRequest')} />;
+        return <DriverDashboard
+          user={currentUser}
+          rides={rides}
+          onAcceptRide={handleAcceptRide}
+          onSelectRide={handleSelectRide}
+          onLogout={handleLogout}
+        />;
+      case 'admin':
+        if (!currentUser) return <LoginScreen onLogin={handleLogin} demoUsers={users} onGuestRequest={() => setCurrentView('guestRequest')} />;
+        return <AdminDashboard
+          users={users}
+          rides={rides}
+          onLogout={handleLogout}
+          onViewRide={handleSelectRide}
+          onUpdateUser={handleUpdateUser}
+          onDeleteUser={handleDeleteUser}
+        />;
+      case 'rideDetail':
+        const selectedRide = rides.find(r => r.id === selectedRideId);
+        if (!currentUser || !selectedRide) {
+          handleBack();
+          return null;
+        }
+        return <RideDetailScreen
+          ride={selectedRide}
+          user={currentUser}
+          messages={messages.filter(m => m.rideId === selectedRideId)}
+          onSendMessage={handleSendMessage}
+          onBack={handleBack}
+          allUsers={users}
+        />;
+      case 'guestRequest':
+        return <GuestRideRequest
+          onBack={() => setCurrentView('login')}
+          pickupLocation={pickupLocation}
+          onRequestRide={handleGuestRequestRide}
+        />;
+      default:
+        return <LoginScreen onLogin={handleLogin} demoUsers={users} onGuestRequest={() => setCurrentView('guestRequest')} />;
+    }
+  };
+
+  return (
+    <div className="text-white min-h-screen">
+        <div className="max-w-lg mx-auto p-4">
+            {renderContent()}
+        </div>
+    </div>
+  );
+};
+
+export default App;

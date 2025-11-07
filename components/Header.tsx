@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import type { User } from '../types';
 import { CarIcon } from './icons/DentalIcon'; // Repurposed icon
@@ -5,9 +6,10 @@ import { CarIcon } from './icons/DentalIcon'; // Repurposed icon
 interface LoginScreenProps {
   onLogin: (username: string, password: string) => boolean;
   demoUsers: User[];
+  onGuestRequest: () => void;
 }
 
-const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, demoUsers }) => {
+const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, demoUsers, onGuestRequest }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -22,6 +24,17 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, demoUsers }) => {
     }
   };
 
+  const handleDemoLogin = (user: User) => {
+    if (!user.password) return;
+    setUsername(user.username);
+    setPassword(user.password);
+    // Use a timeout to allow React to update state before submitting the form
+    setTimeout(() => {
+        const form = document.getElementById('login-form') as HTMLFormElement;
+        form?.requestSubmit();
+    }, 0);
+  }
+
   return (
     <div className="flex flex-col items-center justify-center min-h-screen -m-4">
         <div className="w-full max-w-sm p-8 space-y-8 bg-slate-800 rounded-2xl shadow-lg">
@@ -33,7 +46,7 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, demoUsers }) => {
                 <p className="text-slate-400">Your ride in Taylorville, IL.</p>
             </div>
             
-            <form onSubmit={handleSubmit} className="space-y-6">
+            <form id="login-form" onSubmit={handleSubmit} className="space-y-6">
                 <input
                     type="text"
                     placeholder="Username"
@@ -55,6 +68,32 @@ const LoginScreen: React.FC<LoginScreenProps> = ({ onLogin, demoUsers }) => {
                     Login
                 </button>
             </form>
+
+            <div className="text-center">
+                <p className="text-sm text-slate-400 mb-3">Or quick login as:</p>
+                <div className="flex justify-center gap-2 flex-wrap">
+                    {demoUsers.filter(u => u.password).map(user => (
+                        <button key={user.id} onClick={() => handleDemoLogin(user)} className="bg-slate-700 text-slate-300 text-xs font-bold py-1.5 px-3 rounded-full hover:bg-slate-600 transition-colors">
+                            {user.name} ({user.role})
+                        </button>
+                    ))}
+                </div>
+            </div>
+            
+             <div className="relative">
+              <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                <div className="w-full border-t border-slate-700" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-slate-800 text-slate-500">
+                  No account?
+                </span>
+              </div>
+            </div>
+
+            <button onClick={onGuestRequest} className="w-full bg-slate-600 text-white font-bold py-3 rounded-lg hover:bg-slate-700 transition-colors">
+              Request Ride as Guest
+            </button>
         </div>
     </div>
   );

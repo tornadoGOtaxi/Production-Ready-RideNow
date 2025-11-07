@@ -9,6 +9,7 @@ export interface User {
   password?: string;
   role: Role;
   avatarUrl: string;
+  email?: string;
 }
 
 export interface LatLng {
